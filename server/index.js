@@ -177,6 +177,11 @@ app.get('/admin/submissions', requireAdmin, (req, res) => {
   });
 });
 
+// Serve React build as static files
+const clientPath = process.env.CLIENT_BUILD_PATH || path.join(__dirname, '../client-build');
+app.use(express.static(clientPath));
+app.get('*', (req, res) => res.sendFile(path.join(clientPath, 'index.html')));
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

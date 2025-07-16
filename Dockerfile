@@ -20,8 +20,5 @@ COPY server/.env ./
 ENV CLIENT_BUILD_PATH=/app/client-build
 ENV PORT=4000
 
-# Add static serving to Express
-RUN echo "\n// Serve React build as static files\nconst clientPath = process.env.CLIENT_BUILD_PATH || path.join(__dirname, '../client-build');\napp.use(express.static(clientPath));\napp.get('*', (req, res) => res.sendFile(path.join(clientPath, 'index.html')));\n" >> index.js
-
 EXPOSE 4000
 CMD ["node", "index.js"]
