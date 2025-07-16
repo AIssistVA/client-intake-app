@@ -58,6 +58,30 @@ function buildAdminEmail(data, files) {
   };
 }
 
+function buildClientEmail(data) {
+  return {
+    from: process.env.SMTP_FROM,
+    to: data.email,
+    subject: 'Thank you for your submission',
+    html: `
+      <h2>Thank you, ${data.name || 'Client'}!</h2>
+      <p>We have received your intake form and will contact you soon.</p>
+      <p><b>Summary:</b></p>
+      <ul>
+        <li><b>Name:</b> ${data.name}</li>
+        <li><b>Email:</b> ${data.email}</li>
+        <li><b>Phone:</b> ${data.phone}</li>
+        <li><b>Company:</b> ${data.company}</li>
+        <li><b>Industry:</b> ${data.industry}</li>
+        <li><b>Requirements:</b> ${data.requirements}</li>
+        <li><b>Timeline:</b> ${data.timeline}</li>
+        <li><b>Budget:</b> ${data.budget}</li>
+      </ul>
+      <p>If you have any questions, reply to this email.</p>
+    `,
+  };
+}
+
 // SQLite setup
 const db = new sqlite3.Database(path.join(__dirname, 'intake.db'));
 db.serialize(() => {
@@ -103,16 +127,22 @@ app.post('/submit', upload.array('files'), async (req, res) => {
           url: `${process.env.BASE_URL || 'http://localhost:4000'}/uploads/${f.filename}`
         })))
       ],
-      function (err) {
+      async function (err) {
         if (err) {
           console.error('DB error:', err);
           return res.status(500).json({ success: false, error: 'Database error' });
+        }
+        // Send client confirmation email
+        try {
+          await transporter.sendMail(buildClientEmail(data));
+        } catch (e) {
+          console.error('Client email send error:', e);
         }
         res.json({ success: true, data, files });
       }
     );
   } catch (e) {
-    console.error('Email send error:', e);
+    console.error('Admin email send error:', e);
     res.status(500).json({ success: false, error: 'Email error' });
   }
 });
