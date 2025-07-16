@@ -6,6 +6,7 @@ const fs = require('fs');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 const sqlite3 = require('sqlite3').verbose();
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -114,6 +115,36 @@ app.post('/submit', upload.array('files'), async (req, res) => {
     console.error('Email send error:', e);
     res.status(500).json({ success: false, error: 'Email error' });
   }
+});
+
+// Admin login endpoint
+app.post('/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.ADMIN_PASSWORD) {
+    const token = jwt.sign({ admin: true }, process.env.JWT_SECRET, { expiresIn: '2h' });
+    res.json({ token });
+  } else {
+    res.status(401).json({ error: 'Invalid password' });
+  }
+});
+// Auth middleware
+function requireAdmin(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) return res.status(401).json({ error: 'No token' });
+  const token = auth.split(' ')[1];
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+// Get all submissions
+app.get('/admin/submissions', requireAdmin, (req, res) => {
+  db.all('SELECT * FROM submissions ORDER BY created_at DESC', (err, rows) => {
+    if (err) return res.status(500).json({ error: 'DB error' });
+    res.json(rows);
+  });
 });
 
 app.listen(PORT, () => {
