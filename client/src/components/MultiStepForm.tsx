@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Paper, Typography, Button, Stepper, Step, StepLabel, Box, LinearProgress } from '@mui/material';
+import { Paper, Typography, Button, Stepper, Step, StepLabel, Box, LinearProgress, Divider } from '@mui/material';
+import { motion } from 'framer-motion';
 import ContactInfoStep from './steps/ContactInfoStep';
 import BusinessDetailsStep from './steps/BusinessDetailsStep';
 import ProjectRequirementsStep from './steps/ProjectRequirementsStep';
@@ -133,7 +134,16 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({ onBack }) => {
   }
 
   return (
-    <Paper elevation={4} sx={{ p: 4, borderRadius: 4, maxWidth: 600, mx: 'auto' }}>
+    <Paper elevation={8} sx={{
+      p: { xs: 2, sm: 4 },
+      borderRadius: 4,
+      maxWidth: 600,
+      mx: 'auto',
+      background: 'rgba(255,255,255,0.96)',
+      boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.10)',
+      backdropFilter: 'blur(2px)',
+      mt: { xs: 2, sm: 6 },
+    }}>
       <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
         {steps.map((label) => (
           <Step key={label}>
@@ -144,16 +154,24 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({ onBack }) => {
       <Box sx={{ mb: 2 }}>
         <LinearProgress variant="determinate" value={((activeStep) / steps.length) * 100} />
       </Box>
-      {activeStep === 0 && <ContactInfoStep {...stepProps} />}
-      {activeStep === 1 && <BusinessDetailsStep {...stepProps} />}
-      {activeStep === 2 && <ProjectRequirementsStep {...stepProps} />}
-      {activeStep === 3 && <BudgetStep {...stepProps} />}
-      {activeStep === 4 && <FileUploadStep {...stepProps} />}
-      {activeStep === 5 && <ReviewSubmitStep {...stepProps} submitting={submitting} />}
+      <Divider sx={{ mb: 3, opacity: 0.15 }} />
+      <motion.div
+        key={activeStep}
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        {activeStep === 0 && <ContactInfoStep {...stepProps} />}
+        {activeStep === 1 && <BusinessDetailsStep {...stepProps} />}
+        {activeStep === 2 && <ProjectRequirementsStep {...stepProps} />}
+        {activeStep === 3 && <BudgetStep {...stepProps} />}
+        {activeStep === 4 && <FileUploadStep {...stepProps} />}
+        {activeStep === 5 && <ReviewSubmitStep {...stepProps} submitting={submitting} />}
+      </motion.div>
       {submitError && (
         <Typography color="error" sx={{ mt: 2 }}>{submitError}</Typography>
       )}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', mt: 4, gap: 2 }}>
         <Button disabled={activeStep === 0} onClick={handleBack}>
           Back
         </Button>
