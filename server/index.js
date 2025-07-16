@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 const nodemailer = require('nodemailer');
+const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -56,6 +57,24 @@ function buildAdminEmail(data, files) {
   };
 }
 
+// SQLite setup
+const db = new sqlite3.Database(path.join(__dirname, 'intake.db'));
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS submissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT,
+    phone TEXT,
+    company TEXT,
+    industry TEXT,
+    requirements TEXT,
+    timeline TEXT,
+    budget TEXT,
+    files TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+});
+
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(uploadDir));
@@ -65,11 +84,36 @@ app.post('/submit', upload.array('files'), async (req, res) => {
   const files = req.files || [];
   try {
     await transporter.sendMail(buildAdminEmail(data, files));
+    // Save to DB
+    db.run(
+      `INSERT INTO submissions (name, email, phone, company, industry, requirements, timeline, budget, files) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.name,
+        data.email,
+        data.phone,
+        data.company,
+        data.industry,
+        data.requirements,
+        data.timeline,
+        data.budget,
+        JSON.stringify(files.map(f => ({
+          filename: f.filename,
+          originalname: f.originalname,
+          url: `${process.env.BASE_URL || 'http://localhost:4000'}/uploads/${f.filename}`
+        })))
+      ],
+      function (err) {
+        if (err) {
+          console.error('DB error:', err);
+          return res.status(500).json({ success: false, error: 'Database error' });
+        }
+        res.json({ success: true, data, files });
+      }
+    );
   } catch (e) {
     console.error('Email send error:', e);
+    res.status(500).json({ success: false, error: 'Email error' });
   }
-  // TODO: Save to DB, send client confirmation, etc.
-  res.json({ success: true, data, files });
 });
 
 app.listen(PORT, () => {
