@@ -6,6 +6,7 @@ import ProjectRequirementsStep from './steps/ProjectRequirementsStep';
 import BudgetStep from './steps/BudgetStep';
 import FileUploadStep from './steps/FileUploadStep';
 import ReviewSubmitStep from './steps/ReviewSubmitStep';
+import axios from 'axios';
 
 const steps = [
   'Contact Info',
@@ -49,6 +50,8 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({ onBack }) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validateStep = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -87,11 +90,25 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({ onBack }) => {
   const handleSubmit = async () => {
     if (!validateStep()) return;
     setSubmitting(true);
-    // TODO: submit to backend
-    setTimeout(() => {
+    setSubmitError(null);
+    try {
+      const form = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'files') {
+          (value as File[]).forEach((file) => form.append('files', file));
+        } else {
+          form.append(key, value as string);
+        }
+      });
+      await axios.post('http://localhost:4000/submit', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setSubmitting(false);
-      setActiveStep(activeStep + 1);
-    }, 1500);
+      setSubmitted(true);
+    } catch (err: any) {
+      setSubmitting(false);
+      setSubmitError('Submission failed. Please try again.');
+    }
   };
 
   const stepProps = {
@@ -101,6 +118,19 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({ onBack }) => {
     onFileChange: handleFileChange,
     setErrors,
   };
+
+  if (submitted) {
+    return (
+      <Paper elevation={4} sx={{ p: 6, borderRadius: 4, textAlign: 'center' }}>
+        <Typography variant="h4" color="primary" gutterBottom>
+          Thank you for your submission!
+        </Typography>
+        <Typography variant="body1">
+          We have received your intake form and will contact you soon.
+        </Typography>
+      </Paper>
+    );
+  }
 
   return (
     <Paper elevation={4} sx={{ p: 4, borderRadius: 4, maxWidth: 600, mx: 'auto' }}>
@@ -120,6 +150,9 @@ const MultiStepForm: React.FC<MultiStepFormProps> = ({ onBack }) => {
       {activeStep === 3 && <BudgetStep {...stepProps} />}
       {activeStep === 4 && <FileUploadStep {...stepProps} />}
       {activeStep === 5 && <ReviewSubmitStep {...stepProps} submitting={submitting} />}
+      {submitError && (
+        <Typography color="error" sx={{ mt: 2 }}>{submitError}</Typography>
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
         <Button disabled={activeStep === 0} onClick={handleBack}>
           Back
