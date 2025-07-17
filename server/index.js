@@ -83,7 +83,14 @@ function buildClientEmail(data) {
 }
 
 // SQLite setup
-const db = new sqlite3.Database(path.join(__dirname, 'intake.db'));
+const dbPath = path.join(__dirname, 'intake.db');
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error opening database:', err.message);
+  } else {
+    console.log('Connected to SQLite database');
+  }
+});
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS submissions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -181,12 +188,8 @@ app.get('/admin/submissions', requireAdmin, (req, res) => {
 const clientPath = process.env.CLIENT_BUILD_PATH || path.join(__dirname, '../client-build');
 app.use(express.static(clientPath));
 
-// Catch-all route for React Router - must be last
-app.get('*', (req, res) => {
-  // Skip API routes
-  if (req.path.startsWith('/admin') || req.path.startsWith('/submit') || req.path.startsWith('/uploads')) {
-    return res.status(404).json({ error: 'Not found' });
-  }
+// Serve index.html for any non-API routes
+app.get('/', (req, res) => {
   res.sendFile(path.join(clientPath, 'index.html'));
 });
 
